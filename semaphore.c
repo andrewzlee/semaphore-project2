@@ -1,51 +1,85 @@
-/* semaphore.c
-contains all relevant prj2 code
+#include "pm.h"
+#include <minix/callnr.h>
+#include <minix/endpoint.h>
+#include <limits.h>
+#include <minix/com.h>
+#include <signal.h>
+#include "mproc.h"
+#include "param.h"
+
+/*semaphore.c*/
+
+/*
+int do_setsv() {
+  register struct mproc *rmp = mp;
+
+  rmp->shared_val = m_in.m1_i1;
+
+  return OK;
+}
+
+int do_getsv() {
+  register struct mproc *rmp = find_proc(m_in.m1_i1);
+
+  if(!rmp) {
+    return -1;
+  }
+
+  mp->mp_reply.m1_i1 = rmp->shared_val;
+
+  return OK;
+}
 */
 
-/*Global variables*/
+struct sem_data {
+	int value;
+	int type;
+	pid_t queue [20];
+	pid_t refs [40]; //keeps track of processes that know semaphore id
+					//when do_fork occurs you add to ref table, when do_exit called you remove from ref
+};
+
+
 typedef int semaphore;
 #define NULL 0
 #define BINARY 0
 #define MULTIVALUED 1
-semaphore create_semaphore(int type, int initial_value);
-int give(semaphore s); //up
-int take(semaphore s); //down
-int delete_semaphore(semaphore s);
 
-int binary;
-int arrayMulti[100]; // 100 resources avaiable at a time
-
-int array2[100][20]; //create queue
+/* Global variables */
+static struct sem_data * s[100]; //create semaphore array with all info within it
+int handleValid  = 0; // temp to compile code
 
 
-semaphore create_semaphore(int type, int initial_value){
+int do_create_semaphore(){
 	/* type = binary (0) or multivalued (1) */
 	/* */
-	int result = 0;
-  	semaphore s = initial_value; // n resources are used
 
-  	if (type){ 
-  		//multivalued
-  		arrayMulti = {0};
-  	}
-  	else {
-  		//binary
-  		binary = 0;
-  	}
+	int initial_value = m_in.m1_i1;
+	int typ = m_in.m1_i2;
 
+	for (int i = 0; i<100; i++){
+		if (s[i] == 0) {		 // if empty populate that address space with semaphore data
+			s[i] = calloc(1, sizeof(struct sem_data));
+			s[i]->value = initial_value;
+			s[i]->type = typ;
+			break;
+		}
+	}
 
+	return 0;
 	//do creation stuff
-	if (failed)
+	/*if (failed)
 		return NULL
 	else
 		return 0 //int value that can be used to find the same semaphore created
+	*/
 }
 
 /*Replace give/up and take/down */
 //up
-int give(semaphore s){
+int do_up(){
 	//do give
-
+/*
 	if (handleValid){
 		if (s > 0){
 			s++;
@@ -63,12 +97,13 @@ int give(semaphore s){
 		}
 	}
 	s++;
+	*/
 }
 
 //down
-int take(semaphore s){
+int do_down(){
 	//do take
-
+/*
 	if (handleValid){
 
 		while (s <= 0){
@@ -82,9 +117,10 @@ int take(semaphore s){
 	else {
 		return 0; // invalid handle
 	}
+	*/
 }
 
-int delete_semaphore(semaphore s){
+int do_delete_semaphore(){
 	//destroy semaphore
 
 	if (handleValid){

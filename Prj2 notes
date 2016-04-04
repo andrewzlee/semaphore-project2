@@ -1,0 +1,89 @@
+Prj2 notes
+
+- will create system calls for the semaphore
+- initialize sempahore is not a MAX, rather where it starts
+- return value in library func is a status code
+
+syscalls returncodes
+- OK returns good status
+- SUSPEND has a code in minix that'll be useful
+	tells process manager to not send response to process that called system call
+
+- EINVAL - error invalid 
+- 
+- 
+
+void awake (register semaphore mp, int val){
+	mp -> mp_reply.value = val;
+	mp -> mp_flags != REPLY;
+}
+
+awake( mp, EINVAL)
+
+--------------
+to add a new file to the process manager (pm)
+
+add the new file to the makefile in pm folder. there should be a list and just add it to the end
+
+---------------
+
+Note: this shouldn't be an issue because once the fork occurs all the semaphore info will be passed down
+
+semaphore s = create_semaphore();
+
+pid_t child = fork();
+
+if (child == 0){
+	execve (xxx);
+}
+
+---------------
+
+reference counting code must 
+
+semaphore_add_reference -- impleemnted in funcs below but code is created in semaphore.c
+
+
+forkexit.c 
+	do_fork
+	do_exit
+
+---------------
+
+
+up(5) look up 4th entry in semaphore table
+
+index + 1 is semaphore ID
+
+
+sem_data s [100]
+pid_t queue [100][20]
+pid_t refs [100][40] //keeps track of processes that know semaphore id
+					 //when do_fork occurs you add to ref table, when do_exit called you remove from ref
+
+
+---------------
+
+Do not need SVs to do project 2.
+
+EASIEST METHOD (all this goes in /pm/sempahore.c)
+array of semaphore sturcts
+
+sem_data * s [100] //create semaphore array with all info within it
+	//use calloc() in stdlib.h
+
+struct sem_data {
+	int value;
+	int type;
+	pid_t queueu [20]
+	pid_t refs [40] //keeps track of processes that know semaphore id
+					//when do_fork occurs you add to ref table, when do_exit called you remove from ref
+} 
+
+
+when fork is called.. child process gets added to reference list
+
+[A] // fork called
+[A, child] //parent killed
+[child] //kill child
+[ ] // when there's no one left to know semaphore IDs, a delete must be called somehow to clean it up
