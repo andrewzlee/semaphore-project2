@@ -7,28 +7,12 @@
 #include "mproc.h"
 #include "param.h"
 
-/*semaphore.c*/
+/*TODOS:
+figure what the refs [40] array does
+figure out what SUSPEND does
+implement awake() 
 
-/*
-int do_setsv() {
-  register struct mproc *rmp = mp;
-
-  rmp->shared_val = m_in.m1_i1;
-
-  return OK;
-}
-
-int do_getsv() {
-  register struct mproc *rmp = find_proc(m_in.m1_i1);
-
-  if(!rmp) {
-    return -1;
-  }
-
-  mp->mp_reply.m1_i1 = rmp->shared_val;
-
-  return OK;
-}
+--> understand above to implement fork() test code
 */
 
 struct sem_data {
@@ -39,93 +23,128 @@ struct sem_data {
 					//when do_fork occurs you add to ref table, when do_exit called you remove from ref
 };
 
-
-typedef int semaphore;
-#define NULL 0
-#define BINARY 0
-#define MULTIVALUED 1
-
 /* Global variables */
 static struct sem_data * s[100]; //create semaphore array with all info within it
-int handleValid  = 0; // temp to compile code
+int handle, loc;
 
 
 int do_create_semaphore(){
 	/* type = binary (0) or multivalued (1) */
 	/* */
-
-	int initial_value = m_in.m1_i1;
-	int typ = m_in.m1_i2;
-
+	
+	int typ = m_in.m1_i1;
+	int initial_value = m_in.m1_i2;
+	//printf("line 57\n");
 	for (int i = 0; i<100; i++){
-		if (s[i] == 0) {		 // if empty populate that address space with semaphore data
+		if (s[i] == NULL) {		 // if empty populate that address space with semaphore data
+			//printf("line 60\n");
 			s[i] = calloc(1, sizeof(struct sem_data));
 			s[i]->value = initial_value;
 			s[i]->type = typ;
-			break;
+			//s[i]->queue = {NULL};
+			//s[i]->refs = {NULL};
+			/* //debug code
+			printf("type: %d... val: %d i: %d\n", s[i]->type, s[i]->value, i);
+			if (s[0] == NULL){
+				printf("current is null\n");
+			}
+			else {
+				printf("current has been changed\n");
+			}
+
+			if (s[20] == NULL){
+				printf("next is null: \n");
+			}
+			*/
+
+			return i+1; //return the handle
 		}
 	}
+	//if all 100 are populated then return failure
 
 	return 0;
-	//do creation stuff
-	/*if (failed)
-		return NULL
-	else
-		return 0 //int value that can be used to find the same semaphore created
-	*/
 }
 
-/*Replace give/up and take/down */
 //up
 int do_up(){
 	//do give
-/*
-	if (handleValid){
-		if (s > 0){
-			s++;
+	handle = m_in.m1_i1;
+	loc = handle - 1; //array location
+
+	if (~(handle > 100 || handle < 1 || s[loc] == NULL )){ // check handle valid
+		if (s[loc]->value > 0){
+			s[loc]->value = s[loc]->value + 1;
 			return -1;
 		}
-		else if (s == 0){
+		else if (s[loc]->value == 0){
 			//isEmpty = determine whether queue associated w/ that semaphore is nonempty
-			if ( !isEmpty ){ // if non-empty
-				//remove first process in queue and mark it as unblocked
+			if ( s[loc]->queue[0] != NULL ){ // if non-empty
+				//remove first process in queue and mark it as unblocked (wake up the next process)
+				//todo: wake(s[loc]->queue[0], NOW)
+				int i = 1;
+				while (s[loc]->queue[i] != NULL && (i < 19) ){
+					s[loc]->queue[i-1] = s[loc]->queue[i];
+				}
+				return -1;	
 			}
 			else {
-				s++;
+				s[loc]->value = 1; 
 				return -1;
 			}
 		}
 	}
-	s++;
-	*/
+
+	return 0; //failure
+	
 }
 
 //down
 int do_down(){
 	//do take
-/*
-	if (handleValid){
+	handle = m_in.m1_i1;
+	loc = handle - 1;
 
-		while (s <= 0){
+	if (~(handle > 100 || handle < 1 || s[loc] == NULL )){ 
+
+		/*
+		while (s[loc]->value <= 0){
 			//busy wait
+		}*/
+		if (s[loc]->value > 0){
+			s[loc]->value --;
+			return -1; //success
 		}
+		else if (s[loc]->value == 0){
+			//add to queue and then mark off blocked
+			for (int i = 0; i < 20; i++){
+				if (s[loc]->queue[i] == NULL){
+					s[loc]->queue[i] = getpid();
+					break;
+				}
+			}
+			return SUSPEND; //mark off as blocked?
+		}	
+	}
+	return 0; // invalid handle
+	
+}
+//destroy semaphore
+int do_delete_semaphore(){
+	
+	handle = m_in.m1_i1;
+	loc = handle - 1; //array location
 
-		s--;
-
-		return -1; //success
+	/*if the handle is out of bounds of the array OR 
+	there is no semaphore in that location return FAILURE*/
+	if (handle > 100 || handle < 1 || s[handle-1] == NULL ){
+		printf("massive failiure\n");
+		return 0; //fail
 	}
 	else {
-		return 0; // invalid handle
-	}
-	*/
-}
-
-int do_delete_semaphore(){
-	//destroy semaphore
-
-	if (handleValid){
-
 		//release resources associated with semaphore and allow them to be reused
+		printf("semaphore released and reset to null\n");
+		//TODO: perform checks for the queue?
+		s[handle-1] = NULL;
 		return -1;
 	}
 }
