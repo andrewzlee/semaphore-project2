@@ -39,7 +39,13 @@ int do_create_semaphore(){
 			s[i]->value = initial_value;
 			s[i]->type = typ;
 			//s[i]->queue = {NULL};
-			//s[i]->refs = {NULL};
+			for (int j=0; j<40; j++){
+				//add the current pid to the refs list
+				if (s[i]->refs[j] == 0){
+					s[i]->refs[j] = mp->mp_pid;
+					break;
+				}
+			}
 			/* //debug code
 			printf("type: %d... val: %d i: %d\n", s[i]->type, s[i]->value, i);
 			if (s[0] == NULL){
@@ -53,12 +59,12 @@ int do_create_semaphore(){
 				printf("next is null: \n");
 			}
 			*/
-
+			//printf("i+1 is: %d\n", i+1);
 			return i+1; //return the handle
 		}
 	}
 	//if all 100 are populated then return failure
-
+	printf("all 100 filled\n");
 	return 0;
 }
 
@@ -69,7 +75,10 @@ int do_up(){
 	loc = handle - 1; //array location
 
 	if (~(handle > 100 || handle < 1 || s[loc] == NULL )){ // check handle valid
-		if (s[loc]->value > 0){
+		if (s[loc]->type == 1 && s[loc]->value ==1){
+			return 0;
+		}
+		else if (s[loc]->value > 0){
 			s[loc]->value = s[loc]->value + 1;
 			return -1;
 		}
@@ -80,8 +89,9 @@ int do_up(){
 				wake(s[loc]->queue[0]); //wake up 
 
 				int i = 1;
-				while (s[loc]->queue[i] != NULL && (i < 19) ){
+				while (s[loc]->queue[i] != NULL && (i < 20) ){
 					s[loc]->queue[i-1] = s[loc]->queue[i]; //shift every waiting pid down 1 location
+					s[loc]->queue[i] = NULL;
 					i++;
 				}
 				return -1;	
@@ -137,7 +147,7 @@ int do_delete_semaphore(){
 
 	/*if the handle is out of bounds of the array OR 
 	there is no semaphore in that location return FAILURE*/
-	if (handle > 100 || handle < 1 || s[handle-1] == NULL ){
+	if (handle > 100 || handle < 1 || s[loc] == NULL ){
 		printf("massive failiure\n");
 		return 0; //fail
 	}
@@ -145,17 +155,73 @@ int do_delete_semaphore(){
 		//release resources associated with semaphore and allow them to be reused
 		printf("semaphore released and reset to null\n");
 		//TODO: perform checks for the queue?
-		s[handle-1] = NULL;
+		s[loc] = NULL;
+		free(s[loc]);
 		return -1;
 	}
 }
 
 void add_reference(){
-	printf("add. 153\n");
+	//printf("add. 153\n");
+
+	for (int i=0; i<100; i++){
+		//if semaphore exists 
+		if (s[i]!= NULL ){
+			//add it to the end of refs
+			for (int j=0; j<40; j++){
+				if (s[i]->refs[j] == NULL){
+					s[i]->refs[j] = mp->mp_pid;
+					break;
+				}
+			}
+		}
+
+		if (s[i] == NULL){
+			break;
+		}
+	}
+
 }
 
 void remove_reference(){
-	printf("remove. 157\n");
+	//printf("remove. 157\n");
+	//scan through all 100 semaphores
+	for (int i=0; i<100; i++){
+		//if the slot is NOT empty
+		if (s[i]!= NULL ){
+			//scan through the refs looking for that specific PID
+			for (int j = 0; j<40; j++){
+				/*
+				if (s[i]->refs[j] == NULL){
+					if (s[i]->refs[1]==NULL){
+						free(s[i])
+					}
+					break;
+				} 
+				*/
+				//if that PID exists 
+				if (s[i]->refs[j] == mp->mp_pid ){
+					//remove it and shift everything down one
+					int k = j;
+					if (k == 0){
+						k++;
+					}
+					while (s[i]->refs[k] != NULL && (k < 40) ){
+						s[i]->refs[k-1] = s[i]->refs[k]; //shift every waiting pid down 1 location
+						s[i]->refs[k] = NULL;
+						k++;
+					}
+
+					if (s[i]->refs[1]==NULL){
+						//printf("%d freed line 207\n", i);
+						s[i] = NULL;
+						free(s[i]);
+					}
+					break;
+				}
+			}
+		}
+	}
 }
 
 void wake(pid_t p)
