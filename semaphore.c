@@ -82,6 +82,7 @@ int do_up(){
 				int i = 1;
 				while (s[loc]->queue[i] != NULL && (i < 19) ){
 					s[loc]->queue[i-1] = s[loc]->queue[i]; //shift every waiting pid down 1 location
+					i++;
 				}
 				return -1;	
 			}
