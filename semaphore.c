@@ -9,10 +9,7 @@
 
 /*TODOS:
 figure what the refs [40] array does
-figure out what SUSPEND does
-implement awake() 
-
---> understand above to implement fork() test code
+--> implement refs for cleanup
 */
 
 struct sem_data {
@@ -80,10 +77,11 @@ int do_up(){
 			//isEmpty = determine whether queue associated w/ that semaphore is nonempty
 			if ( s[loc]->queue[0] != NULL ){ // if non-empty
 				//remove first process in queue and mark it as unblocked (wake up the next process)
-				//todo: wake(s[loc]->queue[0], NOW)
+				wake(s[loc]->queue[0]); //wake up 
+
 				int i = 1;
 				while (s[loc]->queue[i] != NULL && (i < 19) ){
-					s[loc]->queue[i-1] = s[loc]->queue[i];
+					s[loc]->queue[i-1] = s[loc]->queue[i]; //shift every waiting pid down 1 location
 				}
 				return -1;	
 			}
@@ -118,11 +116,13 @@ int do_down(){
 			//add to queue and then mark off blocked
 			for (int i = 0; i < 20; i++){
 				if (s[loc]->queue[i] == NULL){
-					s[loc]->queue[i] = getpid();
+					//pid_t pd = getpid();
+					printf("%d added by down\n", mp->mp_pid);
+					s[loc]->queue[i] = mp->mp_pid;
 					break;
 				}
 			}
-			return SUSPEND; //mark off as blocked?
+			return SUSPEND; //mark off as blocked
 		}	
 	}
 	return 0; // invalid handle
@@ -147,4 +147,27 @@ int do_delete_semaphore(){
 		s[handle-1] = NULL;
 		return -1;
 	}
+}
+
+void add_reference(){
+	printf("add. 153\n");
+}
+
+void remove_reference(){
+	printf("remove. 157\n");
+}
+
+void wake(pid_t p)
+{
+	register struct mproc *rmp = find_proc(p);
+
+	if (rmp == NULL){
+		printf("PID doesn't exist. MASSIVE FAILURE\n");
+	}
+
+	// indicate success
+	rmp->mp_reply.reply_res = OK;
+
+	// and mark this process as having a message
+	rmp->mp_flags |= REPLY;
 }
