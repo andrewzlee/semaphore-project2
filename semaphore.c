@@ -41,7 +41,7 @@ int do_create_semaphore(){
 			//s[i]->queue = {NULL};
 			for (int j=0; j<40; j++){
 				//add the current pid to the refs list
-				if (s[i]->refs[j] == 0){
+				if (s[i]->refs[j] == NULL){
 					s[i]->refs[j] = mp->mp_pid;
 					break;
 				}
@@ -163,20 +163,23 @@ int do_delete_semaphore(){
 
 void add_reference(){
 	//printf("add. 153\n");
+int exitloop = 0;
 
 	for (int i=0; i<100; i++){
 		//if semaphore exists 
 		if (s[i]!= NULL ){
 			//add it to the end of refs
 			for (int j=0; j<40; j++){
-				if (s[i]->refs[j] == NULL){
+				//checks for duplicates and the next empty slot
+				if (s[i]->refs[j] == NULL || s[i]->refs[j] == mp->mp_pid){
 					s[i]->refs[j] = mp->mp_pid;
+					exitloop = 1;
 					break;
 				}
 			}
 		}
 
-		if (s[i] == NULL){
+		if (exitloop){
 			break;
 		}
 	}
@@ -203,16 +206,23 @@ void remove_reference(){
 				if (s[i]->refs[j] == mp->mp_pid ){
 					//remove it and shift everything down one
 					int k = j;
-					if (k == 0){
-						k++;
+					k++;
+					if (s[i]->refs[1] == NULL){ //secial case where there's only 1 element in refs
+						s[i]->refs[0] = NULL; 
 					}
-					while (s[i]->refs[k] != NULL && (k < 40) ){
-						s[i]->refs[k-1] = s[i]->refs[k]; //shift every waiting pid down 1 location
-						s[i]->refs[k] = NULL;
-						k++;
+					else if (k==40){ //special where remove last element from queue
+						s[i]->refs[39]==NULL; 
 					}
-
-					if (s[i]->refs[1]==NULL){
+					else{ //every other case
+						while (s[i]->refs[k] != NULL && (k < 40) ){  
+							//printf("k-1 is %d\n", k-1);
+							s[i]->refs[k-1] = s[i]->refs[k]; //shift every waiting pid down 1 location
+							s[i]->refs[k] = NULL;
+							k++;
+						}
+					}
+					//if (s[i]->refs[1]==NULL && s[i]->refs[0]==NULL){
+					if (s[i]->refs[0]==NULL){
 						//printf("%d freed line 207\n", i);
 						s[i] = NULL;
 						free(s[i]);
