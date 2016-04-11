@@ -211,7 +211,7 @@ void remove_reference(){
 						s[i]->refs[0] = NULL; 
 					}
 					else if (k==40){ //special where remove last element from queue
-						s[i]->refs[39]==NULL; 
+						s[i]->refs[39]=NULL; 
 					}
 					else{ //every other case
 						while (s[i]->refs[k] != NULL && (k < 40) ){  
