@@ -133,7 +133,6 @@ int do_delete_semaphore(){
 }
 
 void add_reference(pid_t child_pid){
-	int exitloop = 0; //toggle to break loop
 	for (int i=0; i<100; i++){
 		//if semaphore exists 
 		if (s[i]!= NULL ){
@@ -142,14 +141,9 @@ void add_reference(pid_t child_pid){
 				//checks for duplicates and the next empty slot
 				if (s[i]->refs[j] == NULL || s[i]->refs[j] == child_pid){
 					s[i]->refs[j] = child_pid;
-					exitloop = 1;
 					break;
 				}
 			}
-		}
-
-		if (exitloop){
-			break;
 		}
 	}
 
@@ -157,6 +151,7 @@ void add_reference(pid_t child_pid){
 
 void remove_reference(){
 	//scan through all 100 semaphores
+	int z=0;
 	for (int i=0; i<100; i++){
 		//if the slot is NOT empty
 		if (s[i]!= NULL ){
