@@ -1,0 +1,16 @@
+NAME
+	int delete_semaphore(semaphore s) - destroys semaphore and deallocates space
+SYNOPSIS
+	int delete_semaphore(semaphore s)
+DESCRIPTION
+	delete_semaphore() shall take a semaphore handle value as its only parameter and determine  if it is a valid handle. If the handle value is valid, it shall release the resources associated with the semaphore and allow them to be reused. It shall return a value of 0 if the call failed for any reason (e.g., due to use of an invalid handle), and a value of -1 if the call succeeded.
+
+OPTIONS
+	N/A
+BUGS
+	N/A
+AUTHOR
+	Andrew Lee
+
+SEE ALSO
+	N/A

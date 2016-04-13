@@ -1,0 +1,16 @@
+NAME
+	int up(semaphore s) - releases resource for other process
+SYNOPSIS
+	int up(semaphore s)
+DESCRIPTION
+	up() takes a semaphore handle value as its only parameter and determine the current value of the semaphore, if it is a valid handle. If the value is positive, it shall increment that value and return immediately. If the value is zero, it shall determine whether the queue associated with that semaphore is non-empty, and if it is, it shall remove the first process in the queue and mark it as unblocked, so that it can return from the down() call and be scheduled. If the queue is empty, then the semaphore's value shall be incremented. In all cases, the process calling up() shall return immediately. It shall return a value of 0 if the call failed for any reason (e.g., due to use of an invalid handle), and a value of -1 if the call succeeded
+
+OPTIONS
+	N/A
+BUGS
+	N/A
+AUTHOR
+	Andrew Lee
+
+SEE ALSO
+	N/A

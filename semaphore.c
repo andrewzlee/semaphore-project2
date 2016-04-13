@@ -7,17 +7,12 @@
 #include "mproc.h"
 #include "param.h"
 
-/*TODOS:
-figure what the refs [40] array does
---> implement refs for cleanup
-*/
-
 struct sem_data {
-	int value;
-	int type;
-	pid_t queue [20];
+	int value; //num of semaphores
+	int type; // binary or multi?
+	pid_t queue [20]; // stores processes that are waiting for a semaphore
 	pid_t refs [40]; //keeps track of processes that know semaphore id
-					//when do_fork occurs you add to ref table, when do_exit called you remove from ref
+					
 };
 
 /* Global variables */
@@ -27,17 +22,16 @@ int handle, loc;
 
 int do_create_semaphore(){
 	/* type = binary (0) or multivalued (1) */
-	/* */
 	
-	int typ = m_in.m1_i1;
-	int initial_value = m_in.m1_i2;
+	int typ = m_in.m1_i1; //read in type
+	int initial_value = m_in.m1_i2; //read in initial value
 
 	for (int i = 0; i<100; i++){
 		if (s[i] == NULL) {		 // if empty populate that address space with semaphore data
-			s[i] = calloc(1, sizeof(struct sem_data));
-			s[i]->value = initial_value;
+			s[i] = calloc(1, sizeof(struct sem_data)); //allocate memory
+			s[i]->value = initial_value; 
 			s[i]->type = typ;
-			//s[i]->queue = {NULL};
+
 			for (int j=0; j<40; j++){
 				//add the current pid to the refs list
 				if (s[i]->refs[j] == NULL){
@@ -45,20 +39,7 @@ int do_create_semaphore(){
 					break;
 				}
 			}
-			/* //debug code
-			printf("type: %d... val: %d i: %d\n", s[i]->type, s[i]->value, i);
-			if (s[0] == NULL){
-				printf("current is null\n");
-			}
-			else {
-				printf("current has been changed\n");
-			}
-
-			if (s[20] == NULL){
-				printf("next is null: \n");
-			}
-			*/
-			//printf("i+1 is: %d\n", i+1);
+			
 			return i+1; //return the handle
 		}
 	}
@@ -72,6 +53,7 @@ int do_up(){
 	loc = handle - 1; //array location
 
 	if (~(handle > 100 || handle < 1 || s[loc] == NULL )){ // check handle valid
+		// if binary and already 1 then exit b/c we cannot exceed one
 		if (s[loc]->type == 1 && s[loc]->value ==1){
 			return 0;
 		}
@@ -79,6 +61,7 @@ int do_up(){
 			s[loc]->value = s[loc]->value + 1;
 			return -1;
 		}
+		//if 0, check queue and let process go if queue is nonempty. otherwise increment
 		else if (s[loc]->value == 0){
 			if ( s[loc]->queue[0] != NULL ){ // if non-empty
 				//remove first process in queue and mark it as unblocked (wake up the next process)
@@ -93,7 +76,7 @@ int do_up(){
 				return -1;	
 			}
 			else {
-				s[loc]->value = 1; 
+				s[loc]->value = 1; //nothing in queue, increment
 				return -1;
 			}
 		}
@@ -110,6 +93,7 @@ int do_down(){
 	loc = handle - 1;
 
 	if (~(handle > 100 || handle < 1 || s[loc] == NULL )){ 
+		//take a resource if available 
 		if (s[loc]->value > 0){
 			s[loc]->value --;
 			return -1; //success
@@ -142,7 +126,6 @@ int do_delete_semaphore(){
 	}
 	else {
 		//release resources associated with semaphore and allow them to be reused
-		//printf("semaphore released and reset to null\n");
 		s[loc] = NULL;
 		free(s[loc]);
 		return -1;
@@ -150,7 +133,7 @@ int do_delete_semaphore(){
 }
 
 void add_reference(pid_t child_pid){
-	int exitloop = 0;
+	int exitloop = 0; //toggle to break loop
 	for (int i=0; i<100; i++){
 		//if semaphore exists 
 		if (s[i]!= NULL ){
@@ -158,10 +141,7 @@ void add_reference(pid_t child_pid){
 			for (int j=0; j<40; j++){
 				//checks for duplicates and the next empty slot
 				if (s[i]->refs[j] == NULL || s[i]->refs[j] == child_pid){
-					//printf("%d || %d \n", s[i]->refs[j] == NULL, s[i]->refs[j] == child_pid);
-					//printf("%d\n", s[i]->refs[j] );
 					s[i]->refs[j] = child_pid;
-					//printf("ref pid: %d added in slot j=%d \n", child_pid,j);
 					exitloop = 1;
 					break;
 				}
@@ -182,19 +162,14 @@ void remove_reference(){
 		if (s[i]!= NULL ){
 			//scan through the refs looking for that specific PID
 			for (int j = 0; j<40; j++){
-				/*
-				if (s[i]->refs[j] == NULL){
-					if (s[i]->refs[1]==NULL){
-						free(s[i])
-					}
-					break;
-				} 
-				*/
 				//if that PID exists 
 				if (s[i]->refs[j] == mp->mp_pid ){
-					//printf("in if stat... pid is: %d\n", mp->mp_pid);
 					//remove it and shift everything down one
-					int k = j;
+					/* Comment: it's not necessary to shift down one,
+					 * but since I already implemented it. Might as well
+					 * keep it. 
+					 */
+					int k = j; //don't mess with the j value
 					k++;
 					if (s[i]->refs[1] == NULL){ //secial case where there's only 1 element in refs
 						s[i]->refs[0] = NULL; 
@@ -203,19 +178,13 @@ void remove_reference(){
 						s[i]->refs[39]=NULL; 
 					}
 					else{ //every other case
-						//printf("i = %d, k = %d \n", i, k);
-						//while (s[i]->refs[k] != NULL && (k < 40) ){ 
 						for (int l = k; l < 40; l++){
-							//printf("k-1 is %d\n", k-1);
-							//printf("shifting down %d\n",l);
 							s[i]->refs[l-1] = s[i]->refs[l]; //shift every waiting pid down 1 location
 							s[i]->refs[l] = NULL;
-							//k++;
 						}
 					}
-					//if (s[i]->refs[1]==NULL && s[i]->refs[0]==NULL){
+					//code for cleanup
 					if (s[i]->refs[0]==NULL){
-						//printf("%d freed line 207\n", i);
 						s[i] = NULL;
 						free(s[i]);
 					}
@@ -235,8 +204,8 @@ void wake(pid_t p)
 	}
 
 	// indicate success
-	rmp->mp_reply.reply_res = -1;
+	rmp->mp_reply.reply_res = -1; //change suspend to -1
 
-	// and mark this process as having a message
+	// mark this process as having a message
 	rmp->mp_flags |= REPLY;
 }

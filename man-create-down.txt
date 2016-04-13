@@ -1,0 +1,16 @@
+NAME
+	int down(semaphore s) - takes resource and decrements semaphore
+SYNOPSIS
+	int down(semaphore s)
+DESCRIPTION
+	down() shall take a semaphore handle value as its only parameter and determine the current value of the semaphore, if it is a valid handle. If the value is positive, it shall decrement that value and return immediately. If the value is zero, it shall enter the calling process into the queue associated with that semaphore and mark the calling process as blocked so that it cannot be scheduled. It shall return a value of 0 if the call failed for any reason (e.g., due to use of an invalid handle), and a value of -1 if the call succeeded.
+
+OPTIONS
+	N/A
+BUGS
+	N/A
+AUTHOR
+	Andrew Lee
+
+SEE ALSO
+	N/A

@@ -1,0 +1,18 @@
+NAME
+	semaphore create_semaphore(int type, int initial_value) - creates a semaphore of some type and some initial value
+SYNOPSIS
+	semaphore create_semaphore(int type, int initial_value) 
+DESCRIPTION
+	create_semaphore() takes two non-negative integers as its arguments and returns a handle for the semaphore created. A return value of NULL means that the call failed. If the value of type is BINARY, then it is a binary semaphore and can only take a value of 0 and 1. If the value of type is MULTIVALUED, then it is a multivalued semaphore and can take any non-negative value. For binary semaphores, the initial value must be 0 or 1. For multivalued semaphores the initial value can be any non-negative integer within the range supported by the integer type. 
+	create_semaphore() allocates space to store the value of the semaphore and its type, as well as maintains a queue of processes that may be waiting on the semaphore. The value is initialized to the initialize value given, provided that it is a legal value, and the queue is initially be empty.
+	create_semaphore() returns an integer value that can be used to find the same semaphore when subsequent calls are that use it, or NULL if the call failed for whatever reason
+
+OPTIONS
+	N/A
+BUGS
+	N/A
+AUTHOR
+	Andrew Lee
+
+SEE ALSO
+	N/A
