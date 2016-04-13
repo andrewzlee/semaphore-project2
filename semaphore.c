@@ -31,10 +31,9 @@ int do_create_semaphore(){
 	
 	int typ = m_in.m1_i1;
 	int initial_value = m_in.m1_i2;
-	//printf("line 57\n");
+
 	for (int i = 0; i<100; i++){
 		if (s[i] == NULL) {		 // if empty populate that address space with semaphore data
-			//printf("line 60\n");
 			s[i] = calloc(1, sizeof(struct sem_data));
 			s[i]->value = initial_value;
 			s[i]->type = typ;
@@ -63,8 +62,6 @@ int do_create_semaphore(){
 			return i+1; //return the handle
 		}
 	}
-	//if all 100 are populated then return failure
-	printf("all 100 filled\n");
 	return 0;
 }
 
@@ -83,7 +80,6 @@ int do_up(){
 			return -1;
 		}
 		else if (s[loc]->value == 0){
-			//isEmpty = determine whether queue associated w/ that semaphore is nonempty
 			if ( s[loc]->queue[0] != NULL ){ // if non-empty
 				//remove first process in queue and mark it as unblocked (wake up the next process)
 				wake(s[loc]->queue[0]); //wake up 
@@ -114,11 +110,6 @@ int do_down(){
 	loc = handle - 1;
 
 	if (~(handle > 100 || handle < 1 || s[loc] == NULL )){ 
-
-		/*
-		while (s[loc]->value <= 0){
-			//busy wait
-		}*/
 		if (s[loc]->value > 0){
 			s[loc]->value --;
 			return -1; //success
@@ -127,8 +118,6 @@ int do_down(){
 			//add to queue and then mark off blocked
 			for (int i = 0; i < 20; i++){
 				if (s[loc]->queue[i] == NULL){
-					//pid_t pd = getpid();
-					printf("%d added by down\n", mp->mp_pid);
 					s[loc]->queue[i] = mp->mp_pid;
 					break;
 				}
@@ -148,31 +137,31 @@ int do_delete_semaphore(){
 	/*if the handle is out of bounds of the array OR 
 	there is no semaphore in that location return FAILURE*/
 	if (handle > 100 || handle < 1 || s[loc] == NULL ){
-		printf("massive failiure\n");
+		//printf("massive failiure\n");
 		return 0; //fail
 	}
 	else {
 		//release resources associated with semaphore and allow them to be reused
-		printf("semaphore released and reset to null\n");
-		//TODO: perform checks for the queue?
+		//printf("semaphore released and reset to null\n");
 		s[loc] = NULL;
 		free(s[loc]);
 		return -1;
 	}
 }
 
-void add_reference(){
-	//printf("add. 153\n");
-int exitloop = 0;
-
+void add_reference(pid_t child_pid){
+	int exitloop = 0;
 	for (int i=0; i<100; i++){
 		//if semaphore exists 
 		if (s[i]!= NULL ){
 			//add it to the end of refs
 			for (int j=0; j<40; j++){
 				//checks for duplicates and the next empty slot
-				if (s[i]->refs[j] == NULL || s[i]->refs[j] == mp->mp_pid){
-					s[i]->refs[j] = mp->mp_pid;
+				if (s[i]->refs[j] == NULL || s[i]->refs[j] == child_pid){
+					//printf("%d || %d \n", s[i]->refs[j] == NULL, s[i]->refs[j] == child_pid);
+					//printf("%d\n", s[i]->refs[j] );
+					s[i]->refs[j] = child_pid;
+					//printf("ref pid: %d added in slot j=%d \n", child_pid,j);
 					exitloop = 1;
 					break;
 				}
@@ -187,7 +176,6 @@ int exitloop = 0;
 }
 
 void remove_reference(){
-	//printf("remove. 157\n");
 	//scan through all 100 semaphores
 	for (int i=0; i<100; i++){
 		//if the slot is NOT empty
@@ -204,6 +192,7 @@ void remove_reference(){
 				*/
 				//if that PID exists 
 				if (s[i]->refs[j] == mp->mp_pid ){
+					//printf("in if stat... pid is: %d\n", mp->mp_pid);
 					//remove it and shift everything down one
 					int k = j;
 					k++;
@@ -214,11 +203,14 @@ void remove_reference(){
 						s[i]->refs[39]=NULL; 
 					}
 					else{ //every other case
-						while (s[i]->refs[k] != NULL && (k < 40) ){  
+						//printf("i = %d, k = %d \n", i, k);
+						//while (s[i]->refs[k] != NULL && (k < 40) ){ 
+						for (int l = k; l < 40; l++){
 							//printf("k-1 is %d\n", k-1);
-							s[i]->refs[k-1] = s[i]->refs[k]; //shift every waiting pid down 1 location
-							s[i]->refs[k] = NULL;
-							k++;
+							//printf("shifting down %d\n",l);
+							s[i]->refs[l-1] = s[i]->refs[l]; //shift every waiting pid down 1 location
+							s[i]->refs[l] = NULL;
+							//k++;
 						}
 					}
 					//if (s[i]->refs[1]==NULL && s[i]->refs[0]==NULL){
@@ -243,7 +235,7 @@ void wake(pid_t p)
 	}
 
 	// indicate success
-	rmp->mp_reply.reply_res = OK;
+	rmp->mp_reply.reply_res = -1;
 
 	// and mark this process as having a message
 	rmp->mp_flags |= REPLY;
